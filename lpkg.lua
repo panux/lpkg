@@ -213,8 +213,9 @@ local function install()
         local files = {}
         local l
         for l in c:lines() do
+            l = string.sub(l, 3, -1)
             if l ~= "" and l ~= ".pkginfo" then
-                append(files, string.sub(l, 3, -1))
+                append(files, l)
             end
         end
         c:close()
