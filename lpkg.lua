@@ -100,12 +100,12 @@ st.number = function(v)
     end
 end
 st.array = function(v)
-    local str = "{"
+    local str = ""
     local d
     for _, d in ipairs(v) do
-        str = str .. s(d) .. ","
+        str = fmt("%s,%s", str, s(d))
     end
-    return string.sub(str, 1, -2) .. "}"
+    return fmt("{%s}", string.sub(str, 2, -1))
 end
 st.table = function(v)
     local i = 0
