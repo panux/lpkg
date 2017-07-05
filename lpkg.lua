@@ -62,14 +62,19 @@ local function parseconf(conffile)
     local k, v
     for k, v in string.gmatch(str, "(%w+)=([%w%-%./:\" ]+)") do
         local s = {}
-        local d
-        for d in v:gmatch("[%w%-%./:]+") do
-            append(s, d)
+        if string.sub(v, 1, 1) == "\"" then
+            v = string.sub(v, 2, -2)
         end
-        if #s < 2 then
-            t[k] = v
-        else
-            t[k] = s
+        if v ~= "" then
+            local d
+            for d in v:gmatch("[%w%-%./:]+") do
+                append(s, d)
+            end
+            if #s < 2 then
+                t[k] = v
+            else
+                t[k] = s
+            end
         end
     end
     return t
@@ -201,6 +206,9 @@ local function preinstall(pkg)
     db[pkg] = {}
     if deps then
         local v
+        if type(deps) == "string" then
+            deps = { deps }
+        end
         for _, v in ipairs(deps) do
             preinstall(v)
         end
