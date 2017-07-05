@@ -15,7 +15,7 @@ local fmt = string.format
 local function exec(...)
     local vals = {...}
     local success, _, code = os.execute(fmt(...))
-    if success then
+    if not success then
         error("something bad")
     end
     --if errcode ~= 0 then
