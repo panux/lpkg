@@ -222,6 +222,7 @@ local function install()
         exec("rm /.pkginfo")
         dbv.deps = cdat.DEPENDENCIES
         dbv.version = cdat.VERSION
+        db[v] = dbv
     end
     saveDB()
     print("Done installing")
