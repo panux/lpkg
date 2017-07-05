@@ -24,7 +24,10 @@ local function exec(...)
 end
 
 local function readall(file)
-    local f = io.open(file)
+    local f, err = io.open(file)
+    if not f then
+        error(fmt("got error %q while reading file %q", err, file))
+    end
     local str = f:read("*all")
     f:close()
     return str
@@ -148,22 +151,27 @@ end
 local function saveDB()
     print("Saving database")
     local dbd = s(db)
-    local dbf = io.open(pkgdb, "w")
+    local dbf, err = io.open(pkgdb, "w")
+    if not dbf then
+        error(fmt("got error %q while reading file %q", err, pkgdb))
+    end
     dbf:write(dbd)
     dbf:close()
     print("Done saving database")
 end
 
 local function load()
-    loadconf()
-    loadDB()
-    repo = config.REPO
-    if not repo then
-        error("Config does not contain repo")
-    end
-    gpgdir = config.GPGDIR
-    if not gpgdir then
-        error("Config does not contain gpgdir")
+    if not db then
+        loadconf()
+        loadDB()
+        repo = config.REPO
+        if not repo then
+            error("Config does not contain repo")
+        end
+        gpgdir = config.GPGDIR
+        if not gpgdir then
+            error("Config does not contain gpgdir")
+        end
     end
 end
 
@@ -200,12 +208,13 @@ local function preinstall(pkg)
     append(toinstall, pkg)
 end
 
-local function install()
+local function install(args)
     load()
     local v
-    for _, v in ipairs(arg) do
+    for _, v in ipairs(args) do
         preinstall(v)
     end
+    ptbl(toinstall)
     for _, v in ipairs(toinstall) do
         local tar = fmt("%s/%s.tar", dldir, v)
         local cmd = fmt("tar -xvf %s -C %s", tar, rootfs)
@@ -221,8 +230,8 @@ local function install()
         c:close()
         local dbv = {}
         dbv.files = files
-        local cdat = parseconf("/.pkginfo")
-        exec("rm /.pkginfo")
+        local cdat = parseconf(fmt("%s/.pkginfo", rootfs))
+        exec("rm %s/.pkginfo", rootfs)
         dbv.deps = cdat.DEPENDENCIES
         dbv.version = cdat.VERSION
         db[v] = dbv
@@ -231,19 +240,35 @@ local function install()
     print("Done installing")
 end
 
+local function bootstrap(args)
+    if #args ~= 2 then
+        print("Usage: lpkg install ROOTFS REPO")
+        exitcode = 4
+        return
+    end
+    rootfs = args[1]
+    configf = rootfs .. configf
+    pkgdb = rootfs .. pkgdb
+    db = {}
+    gpgdir = "~/.gnupg"
+    repo = args[2]
+    install({"base"})
+end
+
 if #arg < 1 then
     print("No command specified.")
     exitcode = 1
 else
     local st = {}
     st.install = install
+    st.bootstrap = bootstrap
     local cmds = table.remove(arg, 1)
     local cmd = st[cmds]
     if not cmd then
         print(string.format("Invalid command %q", cmds))
         exitcode = 2
     else
-        local ok, err = pcall(cmd)
+        local ok, err = pcall(cmd, arg)
         if not ok then
             print(err)
             exitcode = 3
