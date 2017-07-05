@@ -43,10 +43,10 @@ local function parseconf(conffile)
     local str = readall(conffile)
     local t = {}
     local k, v
-    for k, v in string.gmatch(str, "(%w+)=([%w\" %-]+)") do
+    for k, v in string.gmatch(str, "(%w+)=([%w%-%./:]+)") do
         local s = {}
         local d
-        for d in v:gmatch("[%w%-]+") do
+        for d in v:gmatch("[%w%-%./:]+") do
             append(s, d)
         end
         if #s < 2 then
@@ -121,7 +121,9 @@ st.table = function(v)
         return fmt("{%s}",string.sub(str, 2, -1))
     end
 end
-
+local function loadf(file)
+    return loadstring("return " .. readall(file))()
+end
 
 local dldir = tmpdir()
 local exitcode = 0
@@ -138,7 +140,7 @@ local function loadconf()
 end
 
 local function loadDB()
-    db = loadstring("return " .. readall(pkgdb))()
+    db = loadf(pkgdb)
 end
 local function saveDB()
     print("Saving database")
@@ -241,18 +243,6 @@ else
         end
     end
 end
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
