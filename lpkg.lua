@@ -122,10 +122,10 @@ st.table = function(v)
     end
 end
 local function loadf(file)
-    return loadstring("return " .. readall(file))()
+    return load("return " .. readall(file))()
 end
 
-local dldir = tmpdir()
+local dldir = dldir()
 local exitcode = 0
 local rootfs = "/"
 local configf = "/etc/lpkg/lpkg.conf"
@@ -165,17 +165,17 @@ local function load()
 end
 
 local function fetchpkg(pkg)
-    local tar = fmt("%s/%s.tar", tmpdir, pkg)
-    local sig = fmt("%s/%s.sig", tmpdir, pkg)
+    local tar = fmt("%s/%s.tar", dldir, pkg)
+    local sig = fmt("%s/%s.sig", dldir, pkg)
     download(fmt("%s/%s.tar.xz", repo, pkg), tar)
     download(fmt("%s/%s.sig", repo, pkg), sig)
     exec("gpgv %s %s", sig, tar)
 end
 
 local function readdeps(pkg)
-    local tar = fmt("%s/%s.tar", tmpdir, pkg)
-    exec("tar -xf %s -C %s ./.pkginfo", tar, tmpdir)
-    local pkginfo = parseconf(fmt("%s/.pkginfo", tmpdir))
+    local tar = fmt("%s/%s.tar", dldir, pkg)
+    exec("tar -xf %s -C %s ./.pkginfo", tar, dldir)
+    local pkginfo = parseconf(fmt("%s/.pkginfo", dldir))
     return pkginfo.DEPENDENCIES
 end
 
@@ -204,7 +204,7 @@ local function install()
         preinstall(v)
     end
     for _, v in ipairs(toinstall) do
-        local tar = fmt("%s/%s.tar", tmpdir, v)
+        local tar = fmt("%s/%s.tar", dldir, v)
         local cmd = fmt("tar -xvf %s -C %s", tar, rootfs)
         local c = io.popen(cmd)
         local files = {}
