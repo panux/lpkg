@@ -125,7 +125,7 @@ local function loadf(file)
     return load("return " .. readall(file))()
 end
 
-local dldir = dldir()
+local dldir = tmpdir()
 local exitcode = 0
 local rootfs = "/"
 local configf = "/etc/lpkg/lpkg.conf"
