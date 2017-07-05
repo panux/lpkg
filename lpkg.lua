@@ -57,7 +57,7 @@ local function parseconf(conffile)
     local str = readall(conffile)
     local t = {}
     local k, v
-    for k, v in string.gmatch(str, "(%w+)=([%w%-%./:]+)") do
+    for k, v in string.gmatch(str, "(%w+)=([%w%-%./:\" ]+)") do
         local s = {}
         local d
         for d in v:gmatch("[%w%-%./:]+") do
