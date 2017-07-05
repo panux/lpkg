@@ -172,7 +172,7 @@ local function fetchpkg(pkg)
     local sig = fmt("%s/%s.sig", dldir, pkg)
     download(fmt("%s/%s.tar.xz", repo, pkg), tar)
     download(fmt("%s/%s.sig", repo, pkg), sig)
-    exec("gpgv %s %s", sig, tar)
+    exec("gpgv --homedir %s %s %s", gpgdir, sig, tar)
 end
 
 local function readdeps(pkg)
