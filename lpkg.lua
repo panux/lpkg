@@ -1,12 +1,26 @@
 #!/usr/bin/lua
 
+local function ptbl(tbl)
+    local i, v
+    for i, v in pairs(tbl) do
+        if type(v) == "table" then
+            print(i .. ":", table.unpack(v))
+        else
+            print(i .. ":", v)
+        end
+    end
+end
+
 local fmt = string.format
 local function exec(...)
     local vals = {...}
-    local errcode = os.execute(fmt(...))
-    if errcode ~= 0 then
-        error(fmt("Error executing command %s", vals[1]))
+    local success, _, code = os.execute(fmt(...)))
+    if success then
+        error("something bad")
     end
+    --if errcode ~= 0 then
+    --    error(fmt("Error executing command %s", vals[1]))
+    --end
 end
 
 local function readall(file)
@@ -56,17 +70,6 @@ local function parseconf(conffile)
         end
     end
     return t
-end
-
-local function ptbl(tbl)
-    local i, v
-    for i, v in pairs(tbl) do
-        if type(v) == "table" then
-            print(i .. ":", table.unpack(v))
-        else
-            print(i .. ":", v)
-        end
-    end
 end
 
 
