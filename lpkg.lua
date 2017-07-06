@@ -60,14 +60,14 @@ local function parseconf(conffile)
     local str = readall(conffile)
     local t = {}
     local k, v
-    for k, v in string.gmatch(str, "(%w+)=([%w%-%./:\" ]+)") do
+    for k, v in string.gmatch(str, "(%w+)=([%w%-%./:\" _]+)") do
         local s = {}
         if string.sub(v, 1, 1) == "\"" then
             v = string.sub(v, 2, -2)
         end
         if v ~= "" then
             local d
-            for d in v:gmatch("[%w%-%./:]+") do
+            for d in v:gmatch("[%w%-%./:_]+") do
                 append(s, d)
             end
             if #s < 2 then
