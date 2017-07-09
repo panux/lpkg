@@ -1,5 +1,16 @@
 #!/usr/bin/lua
 
+local olderr = error
+local fmt = string.format
+
+local function error(...)
+    olderr(fmt(...))
+end
+
+local function printf(...)
+    print(fmt(...))
+end
+
 local function ptbl(tbl)
     local i, v
     for i, v in pairs(tbl) do
@@ -11,7 +22,6 @@ local function ptbl(tbl)
     end
 end
 
-local fmt = string.format
 local function exec(...)
     local vals = {...}
     local success, _, code = os.execute(fmt(...))
@@ -21,6 +31,14 @@ local function exec(...)
     --if errcode ~= 0 then
     --    error(fmt("Error executing command %s", vals[1]))
     --end
+end
+
+local function rm(name)
+    exec("rm %s", name)
+end
+
+local function rmdir(name)
+    exec("rm -r %s", name)
 end
 
 local function readall(file)
@@ -248,6 +266,91 @@ local function install(args)
     print("Done installing")
 end
 
+local function remove(args)
+    load()
+    --step 1: check for packages that are not installed and create a table of packages to remove
+    local remove = {}
+    local a
+    for _, a in ipairs(args) do
+        if not db[a] then
+            error("Cannot remove package %q which is not installed", a)
+        end
+        remove[a] = true
+    end
+    --step 2: look for packages which depend on what we are trying to remove
+    local deps = {}
+    local name, dbe
+    local kg = true
+    for name, dbe in pairs(db)
+        if not remove[name] then
+            local p
+            local d = {}
+            for _, p in ipairs(dbe.deps) do
+                if remove[p] then
+                    append(d, p)
+                end
+            end
+            if #d > 0 then
+                deps[name] = d
+                kg = false
+            end
+        end
+    end
+    if not kg then
+        print("Error: other packages depend on what you are trying to remove")
+        local n, p
+        for n, d in pairs(deps) do
+            if #d == 1 then
+                printf("Package %q depends on %q", n, d[1])
+            else
+                printf("Package %q depends on:", n)
+                local p
+                for _, p in ipairs(d) do
+                    printf("\t%s", p)
+                end
+            end
+        end
+    end
+    --step 3: check what files can be deleted
+    local files = {}
+    local p
+    for _, p in pairs(db) do
+        if remove[p] then
+            local f
+            for _, f in ipairs(db.files) do
+                if files[f] ~= 2 then
+                    files[f] = 1
+                end
+            end
+        else
+            local f
+            for _, f in ipairs(db.files) do
+                files[f] = 2
+            end
+        end
+    end
+    --step 4: seperate file and directories
+    local directories = {}
+    local f, c
+    for f, c in pairs(files) do
+        if c == 1 then
+            if string.sub(f, -1, -1) == "/" then
+                append(directories, f)
+            end
+            append(files, f)
+        end
+    end
+    --step 5: delete everything
+    print("Deleting. . . ")
+    for _, f in ipairs(files) do
+        rm(f)
+    end
+    for _, f in ipairs(directories) do
+        rmdir(f)
+    end
+    print("Done!")
+end
+
 local function bootstrap(args)
     if #args ~= 2 then
         print("Usage: lpkg install ROOTFS REPO")
@@ -270,6 +373,7 @@ else
     local st = {}
     st.install = install
     st.bootstrap = bootstrap
+    st.remove = remove
     local cmds = table.remove(arg, 1)
     local cmd = st[cmds]
     if not cmd then
