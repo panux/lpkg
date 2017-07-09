@@ -314,14 +314,14 @@ local function remove(args)
     for _, p in pairs(db) do
         if remove[p] then
             local f
-            for _, f in ipairs(db.files) do
+            for _, f in ipairs(p.files) do
                 if files[f] ~= 2 then
                     files[f] = 1
                 end
             end
         else
             local f
-            for _, f in ipairs(db.files) do
+            for _, f in ipairs(p.files) do
                 files[f] = 2
             end
         end
@@ -346,7 +346,7 @@ local function remove(args)
         rmdir(f)
     end
     --step 6: remove from database and save
-    for _, p in ipairs(args) then
+    for _, p in ipairs(args) do
         db[p] = nil
     end
     saveDB()
