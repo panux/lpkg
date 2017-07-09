@@ -1,10 +1,20 @@
 #!/usr/bin/lua
 
 local olderr = error
+local oldipairs = ipairs
+local oldpairs = pairs
 local fmt = string.format
 
 local function error(...)
     olderr(fmt(...))
+end
+
+local function ipairs(tbl)
+    oldipairs(tbl)
+end
+
+local function pairs(tbl)
+    oldpairs(tbl)
 end
 
 local function printf(...)
@@ -285,11 +295,9 @@ local function remove(args)
         if not remove[name] then
             local p
             local d = {}
-            if dbe.deps then
-                for _, p in ipairs(dbe.deps) do
-                    if remove[p] then
-                        append(d, p)
-                    end
+            for _, p in ipairs(dbe.deps) do
+                if remove[p] then
+                    append(d, p)
                 end
             end
             if #d > 0 then
