@@ -285,9 +285,11 @@ local function remove(args)
         if not remove[name] then
             local p
             local d = {}
-            for _, p in ipairs(dbe.deps) do
-                if remove[p] then
-                    append(d, p)
+            if not dbe.deps then
+                for _, p in ipairs(dbe.deps) do
+                    if remove[p] then
+                        append(d, p)
+                    end
                 end
             end
             if #d > 0 then
