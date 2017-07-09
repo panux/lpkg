@@ -281,7 +281,7 @@ local function remove(args)
     local deps = {}
     local name, dbe
     local kg = true
-    for name, dbe in pairs(db)
+    for name, dbe in pairs(db) do
         if not remove[name] then
             local p
             local d = {}
