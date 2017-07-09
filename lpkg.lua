@@ -10,19 +10,17 @@ local function error(...)
 end
 
 local function ipairs(tbl)
-    if tbl ~= nil then
-        return oldipairs(tbl)
-    else
-        return nil
+    if not tbl then
+        tbl = {}
     end
+    return oldipairs(tbl)
 end
 
 local function pairs(tbl)
-    if tbl ~= nil then
-        return oldpairs(tbl)
-    else
-        return nil
+    if not tbl then
+        tbl = {}
     end
+    return oldpairs(tbl)
 end
 
 local function printf(...)
