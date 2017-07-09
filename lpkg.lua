@@ -49,13 +49,8 @@ local function exec(...)
     --end
 end
 
-local function rm(name)
-    exec("rm %s", name)
-end
-
-local function rmdir(name)
-    exec("rm -r %s", name)
-end
+local rm = os.remove
+local rmdir = os.remove
 
 local function readall(file)
     local f, err = io.open(file)
