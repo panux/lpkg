@@ -364,6 +364,11 @@ local function remove(args)
     for _, f in ipairs(directories) do
         rmdir(f)
     end
+    --step 6: remove from database and save
+    for _, p in ipairs(args) then
+        db[p] = nil
+    end
+    saveDB()
     print("Done!")
 end
 
