@@ -431,7 +431,6 @@ end
 local function bootstrap(repobase, version, arch, root, ...)
     if (not repobase) or (not version) or (not arch) or (not root) then
         print("Missing arguments to lpkg bootstrap")
-        ptbl(repobase)
         exitcode = 65
         return
     end
