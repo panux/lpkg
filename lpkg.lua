@@ -413,6 +413,12 @@ local function install(...)
     end
     print("Checking for conflicts")
     chkConflict(ptbl)
+    print("Checking for packages that are already installed")
+    for n, _ in pairs(ptbl) do
+        if installed[n] then
+            ptbl[n] = nil
+        end
+    end
     print("Downloading packages")
     local p
     for _, p in pairs(ptbl) do
