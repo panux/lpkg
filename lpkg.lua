@@ -220,6 +220,9 @@ local function fetchInfo(pkg)
     if info.NAME ~= pkg then
         error("Name mismatch in package info")
     end
+    if type(info.DEPENDENCIES) == "string" then
+        info.DEPENDENCIES = {info.DEPENDENCIES}
+    end
     return info
 end
 
@@ -229,6 +232,7 @@ local function getDeps(pkg, ptbl)
     end
     local info = fetchInfo(pkg)
     ptbl[pkg] = info
+    print(s(info))
     if info.DEPENDENCIES then
         local p
         for _, p in ipairs(info.DEPENDENCIES) do
