@@ -163,7 +163,7 @@ local rootfs = "/"
 local configf = "/etc/lpkg/lpkg.conf"
 local config
 local repo
-local lpkgdir
+local lpkgdir = "/etc/lpkg/"
 local pins
 local installed
 local upd = false
