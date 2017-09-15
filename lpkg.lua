@@ -364,9 +364,27 @@ local function fetchPkg(pkg)
     addFileList(pkg, pkf)
 end
 
+function exists(file)
+   local f = io.open(file, "r")
+   if f ~= nil then
+       io.close(f)
+       return true
+   else
+       return false
+   end
+end
+
 local function installPkg(pkgname)
     local pkf = fmt("%s/%s.tar.gz", dldir, pkgname)
     exec("tar -xf %s -C %s --exclude ./.pkginfo", pkf, rootfs)
+    if exists(fmt("%s/.oninstall", rootfs)) then
+        if rootfs == "/" then
+            exec("/.oninstall")
+        else
+            exec("chroot %s /.oninstall", rootfs)
+        end
+        os.remove(fmt("%s/.oninstall", rootfs))
+    end
 end
 
 local function loadAllDB()
@@ -493,6 +511,6 @@ end
 print("Cleaning up. . . ")
 local v
 for _, v in ipairs(tmps) do
-    os.remove(v)
+    exec("rm -rf %s", v)
 end
 os.exit(exitcode)
