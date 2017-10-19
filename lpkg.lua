@@ -1,7 +1,7 @@
 #!/usr/bin/lua
 
 local rootfs = "/"
-local configf = "/etc/lpkg.conf"
+local configf = "/etc/lpkg.d/lpkg.conf"
 local config
 local db
 local lpkgdir
