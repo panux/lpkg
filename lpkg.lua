@@ -1,5 +1,14 @@
 #!/usr/bin/lua
 
+local rootfs = "/"
+local configf = "/etc/lpkg.conf"
+local config
+local db
+local lpkgdir
+local repo
+local https = false
+
+
 local olderr = error
 local fmt = string.format
 
@@ -11,31 +20,6 @@ local function printf(...)
     print(fmt(...))
 end
 
-local function ptbl(tbl)
-    local i, v
-    for i, v in pairs(tbl) do
-        if type(v) == "table" then
-            print(i .. ":", table.unpack(v))
-        else
-            print(i .. ":", v)
-        end
-    end
-end
-
-local function exec(...)
-    local vals = {...}
-    local success, _, code = os.execute(fmt(...))
-    if not success then
-        error("something bad")
-    end
-    --if errcode ~= 0 then
-    --    error(fmt("Error executing command %s", vals[1]))
-    --end
-end
-
-local rm = os.remove
-local rmdir = os.remove
-
 local function readall(file)
     local f, err = io.open(file)
     if not f then
@@ -44,62 +28,6 @@ local function readall(file)
     local str = f:read("*all")
     f:close()
     return str
-end
-
-local function writeAll(file, data)
-    local f, err = io.open(file, "w")
-    if not f then
-        error(fmt("got error %s while saving file %s", err, file))
-    end
-    f:write(data)
-    f:close()
-end
-
-local function append(tbl, val)
-    tbl[#tbl + 1] = val
-end
-
-local function sleep(time)
-    exec(fmt("sleep %f", time))
-end
-
-local function download(url, dest)
-    exec("wget %s -O %s", url, dest)
-end
-
-local tmps = {}
-
-local function tmpdir()
-    local t = io.popen("mktemp -d")
-    local dir = t:read("*line")
-    t:close()
-    append(tmps, dir)
-    return dir
-end
-
---parseconf parses config syntax
-local function parseconf(conffile)
-    local str = readall(conffile)
-    local t = {}
-    local k, v
-    for k, v in string.gmatch(str, "(%w+)=([%w%-%./:\" _]+)") do
-        local s = {}
-        if string.sub(v, 1, 1) == "\"" then
-            v = string.sub(v, 2, -2)
-        end
-        if v ~= "" then
-            local d
-            for d in v:gmatch("[%w%-%./:_]+") do
-                append(s, d)
-            end
-            if #s < 2 then
-                t[k] = v
-            else
-                t[k] = s
-            end
-        end
-    end
-    return t
 end
 
 --serializer
@@ -157,26 +85,119 @@ local function loadf(file)
     return load("return " .. readall(file))()
 end
 
-local dldir = tmpdir()
-local exitcode = 0
-local rootfs = "/"
-local configf = "/etc/lpkg/lpkg.conf"
-local config
-local repo
-local lpkgdir = "/etc/lpkg/"
-local pins
-local installed
-local upd = false
-
-local function loadInstalled()
-    if installed then return end
-    local inst = {}
-    for l in io.lines(fmt("%s/installed.list", lpkgdir)) do
-        if l ~= "" then
-            inst[l] = true
+local function ptbl(tbl)
+    local i, v
+    for i, v in pairs(tbl) do
+        if type(v) == "table" then
+            print(i .. ":", table.unpack(v))
+        else
+            print(i .. ":", v)
         end
     end
-    installed = inst
+end
+
+local function exec(...)
+    print(fmt(...))
+    local vals = {...}
+    local success, _, code = os.execute(fmt(...))
+    if not success then
+        error("something bad")
+    end
+end
+
+local rm = os.remove
+local rmdir = os.remove
+
+local function readall(file)
+    local f, err = io.open(file)
+    if not f then
+        error(fmt("got error %q while reading file %q", err, file))
+    end
+    local str = f:read("*all")
+    f:close()
+    return str
+end
+
+local function writeAll(file, data)
+    local f, err = io.open(file, "w")
+    if not f then
+        error(fmt("got error %s while saving file %s", err, file))
+    end
+    f:write(data)
+    f:close()
+end
+
+local function append(tbl, val)
+    tbl[#tbl + 1] = val
+end
+
+local function split(str, sep)
+    local o = {}
+    for str in string.gmatch(str, "([^"..sep.."]+)") do
+        append(o, str)
+    end
+    return o
+end
+
+local function addFileList(pkg, tar)
+    local t = io.popen(fmt("tar -tf %s --exclude ./.pkginfo", tar))
+    local l, fl
+    fl = {}
+    for l in t:lines() do
+        if l ~= "" and l ~= "./" then
+            append(fl, l)
+        end
+    end
+    pkg.FILES = fl
+end
+
+local function sleep(time)
+    exec(fmt("sleep %f", time))
+end
+
+local function download(url, dest)
+    if https then
+        exec("curl https://%s -o %s", url, dest)
+    else
+        exec("wget http://%s -O %s", url, dest)
+    end
+end
+
+local tmps = {}
+
+local function tmpdir()
+    local t = io.popen("mktemp -d")
+    local dir = t:read("*line")
+    t:close()
+    append(tmps, dir)
+    return dir
+end
+
+local dldir = tmpdir()
+
+--parseconf parses config syntax
+local function parseconf(conffile)
+    local str = readall(conffile)
+    local t = {}
+    local k, v
+    for k, v in string.gmatch(str, "(%w+)=([%w%-%./:\" _]+)") do
+        local s = {}
+        if string.sub(v, 1, 1) == "\"" then
+            v = string.sub(v, 2, -2)
+        end
+        if v ~= "" then
+            local d
+            for d in v:gmatch("[%w%-%./:_]+") do
+                append(s, d)
+            end
+            if #s < 2 then
+                t[k] = v
+            else
+                t[k] = s
+            end
+        end
+    end
+    return t
 end
 
 local function loadConf()
@@ -186,21 +207,37 @@ local function loadConf()
     if not repo then
         error("Config does not contain repo")
     end
-end
-
-local function loadPins()
-    if pins then return end
-    local p = {}
-    for l in io.lines(fmt("%s/pins.list", lpkgdir)) do
-        append(p, l)
+    lpkgdir = config.LPKGDIR
+    if not lpkgdir then
+        lpkgdir = rootfs .. "/etc/lpkg.d"
     end
-    pins = p
+    https = config.https
+    pins = loadf(lpkgdir .. "/pins.list")
 end
 
-local function load()
-    loadConf()
-    loadInstalled()
-    loadPins()
+--concRun runs functions concurrently (can be nested)
+local function concRun(...)
+    local c = {...}
+    for i, f in ipairs(c) do
+        c[i] = coroutine.create(f)
+    end
+    while true do
+        local a = false
+        for i, t in ipairs(c) do
+            if t then
+                local ok = coroutine.resume(t)
+                if not ok then
+                    c[i] = nil
+                end
+                a = true
+            end
+        end
+        if a then
+            sleep(0.1)
+        else
+            return
+        end
+    end
 end
 
 local function checkSig(file, sig)
@@ -220,39 +257,50 @@ local function fetchInfo(pkg)
     if info.NAME ~= pkg then
         error("Name mismatch in package info")
     end
+    if not info.DEPENDENCIES then
+        info.DEPENDENCIES = {}
+    end
     if type(info.DEPENDENCIES) == "string" then
         info.DEPENDENCIES = {info.DEPENDENCIES}
     end
     return info
 end
 
-local function getDeps(pkg, ptbl)
-    if ptbl[pkg] then
-        return
-    end
-    local info = fetchInfo(pkg)
-    ptbl[pkg] = info
-    print(s(info))
-    if info.DEPENDENCIES then
-        local p
-        for _, p in ipairs(info.DEPENDENCIES) do
-            getDeps(p, ptbl)
+local function resolveDeps(deptbl, pkgname)
+    local info = fetchInfo(pkgname)
+    deptbl[pkgname] = info
+    local cf = {}
+    for _, p in ipairs(info.DEPENDENCIES) do
+        if not deptbl[p] then
+            append(cf, function()
+                resolveDeps(deptbl, p)
+            end)
         end
     end
+    concRun(table.unpack(cf))
 end
 
-local function split(str, sep)
-    local o = {}
-    for str in string.gmatch(str, "([^"..sep.."]+)") do
-        append(o, str)
+local function chkConflict(ptbl)
+    local p, pc, c
+    for _, p in pairs(ptbl) do
+        pc = p.CONFLICTS
+        if pc then
+            for _, c in ipairs(pc) do
+                if ptbl[c] then
+                    error("%s conflicts with %s", p.NAME, c.NAME)
+                end
+            end
+        end
     end
-    return o
 end
 
 local function compareVersion(v1, v2)
     local n1 = split(v1, ".")
     local n2 = split(v2, ".")
     local i = 1
+    if v1 == "local" or v2 == "local" then
+        return "local"
+    end
     while (n1[i] ~= nil) or (n2[i] ~= nil) do
         local a, b = n1[i], n2[i]
         if a == nil then
@@ -271,22 +319,38 @@ local function compareVersion(v1, v2)
     return v1
 end
 
-local function chkConflict(ptbl)
-    local p, pc, c
-    for _, p in pairs(ptbl) do
-        pc = p.CONFLICTS
-        if pc then
-            for _, c in ipairs(pc) do
-                if ptbl[c] then
-                    error("%s conflicts with %s", p.NAME, c.NAME)
-                end
+local function diffState(old, new)
+    print("Old:", s(old))
+    print()
+    print("New:", s(new))
+    local i, r, u, n = {}, {}, {}, {}
+    for n, p in pairs(new) do
+        if old[n] then  --either upgrade or nothing
+            if compareVersion(old.VERSION, new.VERSION) ~= old.VERSION then
+                append(u, p)
+            else
+                append(n, p)
             end
+        else
+            append(i, p)
         end
     end
+    for n, p in pairs(old) do
+        if not new[n] then
+            append(r, p)
+        end
+    end
+    return i, r, u, n
 end
 
-local function loadLocalInfo(pkg)
-    return loadf(fmt("%s/db/%s.db", lpkgdir, pkg))
+local function buildFileList(state)
+    local l = {}
+    for _, p in pairs(state) do
+        for _, f in ipairs(p.FILES) do
+            append(l, f)
+        end
+    end
+    return l
 end
 
 local function index(arr)
@@ -297,61 +361,23 @@ local function index(arr)
     return i
 end
 
-local function mergeIndexes(...)
-    local is = {...}
-    local i = {}
-    local ind, k
-    for _, ind in ipairs(is) do
-        for k, _ in pairs(ind) do
-            i[k] = true
-        end
-    end
-    return i
-end
-
-local function preOp(new, old)
-    local kind = {}
-    local p, f
-    for _, p in pairs(new) do
-        if p.FILES then
-            append(kind, index(p.FILES))
-        end
-    end
-    kind = mergeIndexes(table.unpack(kind))
-    for _, p in pairs(old) do
-        if p.FILES then
-            for _, f in ipairs(p.FILES) do
-                if not kind[f] then
-                    exec("rm %s", f)
-                end
-            end
+local function deleteOld(old, new)
+    local o = buildFileList(old)
+    local n = buildFileList(new)
+    local ni = index(n)
+    for _, f in ipairs(o) do
+        if not ni[f] then
+            exec("rm -rf %s/%s", rootfs, f)
         end
     end
 end
 
-local function addFileList(pkg, tar)
-    local t = io.popen(fmt("tar -tf %s --exclude ./.pkginfo", tar))
-    local l, fl
-    fl = {}
-    for l in t:lines() do
-        if l ~= "" then
-            append(fl, l)
-        end
+local function list(state)
+    local s = ""
+    for _, p in ipairs(state) do
+        s = s .. p.NAME .. " "
     end
-    pkg.FILES = fl
-end
-
-local function shouldInstall(pkg)
-    local n = pkg.NAME
-    if installed[n] and upd then
-        local li = loadLocalInfo(n)
-        if compareVersion(li.VERSION, pkg.VERSION) ~= li.VERSION then
-            return true
-        end
-    else
-        return true
-    end
-    return false
+    return s
 end
 
 local function fetchPkg(pkg)
@@ -374,8 +400,8 @@ function exists(file)
    end
 end
 
-local function installPkg(pkgname)
-    local pkf = fmt("%s/%s.tar.gz", dldir, pkgname)
+local function installPkg(pkg)
+    local pkf = fmt("%s/%s.tar.gz", dldir, pkg.NAME)
     exec("tar -xf %s -C %s --exclude ./.pkginfo", pkf, rootfs)
     if exists(fmt("%s/.oninstall", rootfs)) then
         if rootfs == "/" then
@@ -387,73 +413,107 @@ local function installPkg(pkgname)
     end
 end
 
-local function loadAllDB()
-    local db = {}
-    local n
-    for n, _ in pairs(installed) do
-        db[n] = loadLocalInfo(n)
+local function transaction(old, npins)
+    local new = {}
+    for _, p in ipairs(npins) do
+        resolveDeps(new, p)
     end
-    return db
+    local i, r, u, n = diffState(old, new)
+    if #i > 0 then
+        printf("To install: %s", list(i))
+    end
+    if #r > 0 then
+        printf("To remove: %s", list(r))
+    end
+    if #u > 0 then
+        printf("To update: %s", list(u))
+    end
+    --TODO: prompt user
+    print("Downloading. . . ")
+    local ni = index(n)
+    for _, p in ipairs(n) do
+        ni[p.NAME].FILES = p.FILES
+    end
+    ni = nil
+    local ex = {}
+    for ind, p in ipairs(i) do
+        ex[ind] = p
+    end
+    for _, p in ipairs(u) do
+        ex[#ex + 1] = p
+    end
+    for _, p in ipairs(ex) do
+        fetchPkg(p)
+    end
+    print("Download complete")
+    print("Installing packages to root fs")
+    for _, p in ipairs(ex) do
+        installPkg(p)
+    end
+    print("Deleting old files. . . ")
+    deleteOld(old, new)
+    print("Transaction complete")
+    return new
 end
 
-local function saveDB(pkg)
-    writeAll(fmt("%s/db/%s.db", lpkgdir, pkg.NAME), s(pkg))
-end
-
-local function saveInstalled()
-    local inst = ""
-    for n, _ in pairs(installed) do
-        inst = inst .. n .. "\n"
+local function inst(rm, ...)
+    loadConf()
+    local db = loadf(lpkgdir .. "/db.db")
+    local np = {...}
+    local npins = {}
+    local opins = index(pins)
+    if rm then
+        for _, p in ipairs(np) do
+            if opins[p] then
+                opins[p] = false
+            end
+        end
+        for p, g in ipairs(opins) do
+            if g then
+                append(npins, p)
+            end
+        end
+    else
+        for _, p in ipairs(pins) do
+            append(npins, p)
+        end
+        for _, p in pairs(np) do
+            if not opins[p] then
+                append(npins, p)
+            end
+        end
     end
-    writeAll(fmt("%s/installed.list", lpkgdir), inst)
-end
-
-local function saveAllDB(db)
-    exec("rm %s/db/*.db", lpkgdir)
-    local n, p
-    for n, p in pairs(db) do
-        saveDB(p)
-        installed[n] = true
-    end
-    saveInstalled()
+    local db = transaction(db, npins)
+    print("Saving DB")
+    writeAll(fmt("%s/db.db", lpkgdir), s(db))
+    writeAll(fmt("%s/pins.list", lpkgdir), s(npins))
+    print("Done!")
 end
 
 local function install(...)
-    load()
-    local ptbl = {}
     local pkgs = {...}
     if #pkgs == 0 then
         print("Nothing to install")
+    else
+        inst(false, ...)
     end
-    print("Resolving dependencies")
-    for _, p in ipairs(pkgs) do
-        getDeps(p, ptbl)
+end
+
+local function update(...)
+    local a = {...}
+    if #a > 0 then
+        error("Update does not take arguments")
     end
-    print("Checking for conflicts")
-    chkConflict(ptbl)
-    print("Checking for packages that are already installed")
-    for n, _ in pairs(ptbl) do
-        if installed[n] then
-            ptbl[n] = nil
-        end
+    inst()
+end
+
+local function remove(...)
+    local pkgs = {...}
+    if #pkgs == 0 then
+        print("Nothing to remove")
+    else
+        inst(true, ...)
     end
-    print("Downloading packages")
-    local p
-    for _, p in pairs(ptbl) do
-        fetchPkg(p)
-    end
-    print("Installing packages")
-    for n, _ in pairs(ptbl) do
-        printf("Installing %s", n)
-        installPkg(n)
-    end
-    print("Saving database entries")
-    for n, p in pairs(ptbl) do
-        installed[n] = true
-        saveDB(p)
-    end
-    print("Updating list of installed packages")
-    saveInstalled()
 end
 
 local function bootstrap(repobase, version, arch, root, ...)
@@ -462,20 +522,18 @@ local function bootstrap(repobase, version, arch, root, ...)
         exitcode = 65
         return
     end
-    exec("mkdir %s", root)
+    print("Preparing initial package manager data")
+    exec("mkdir -p %s/etc/lpkg.d", root)
     rootfs = root
-    print("Bootstrapping package manager directory")
-    exec("mkdir -p %s/etc/lpkg/db", rootfs)
-    lpkgdir = fmt("%s/etc/lpkg", rootfs)
-    exec("touch %s/pins.list", lpkgdir)
-    exec("touch %s/installed.list", lpkgdir)
-    local cnf = fmt("REPO=http://%s/%s/%s/pkgs", repobase, version, arch)
-    writeAll(fmt("%s/lpkg.conf", lpkgdir), cnf)
+    lpkgdir = fmt("%s/etc/lpkg.d", rootfs)
+    writeAll(lpkgdir .. "/db.db", s({}))
+    writeAll(fmt("%s/pins.list", lpkgdir),s({}))
+    local cnf = fmt("REPO=%s/%s/%s/pkgs", repobase, version, arch)
     configf = fmt("%s/lpkg.conf", lpkgdir)
-    print("Downloading public key over HTTPS")
-    download(fmt("https://%s/minisign.pub", repobase), fmt("%s/key.pub", lpkgdir))
-    print("Loading configuration")
-    load()
+    writeAll(configf, cnf)
+    print("Downloading public key")
+    https = true
+    download(fmt("%s/minisign.pub", repobase), fmt("%s/key.pub", lpkgdir))
     print("Installing system")
     local pkgs = {...}
     if #pkgs == 0 then
@@ -490,23 +548,24 @@ if #arg < 1 then
     exitcode = 1
 else
     local st = {}
-    st.install = install
     st.bootstrap = bootstrap
+    st.install = install
+    st.remove = remove
+    st.update = update
     local cmds = table.remove(arg, 1)
     local cmd = st[cmds]
     if not cmd then
         print(string.format("Invalid command %q", cmds))
         exitcode = 2
     else
-        local ok, err = pcall(cmd, table.unpack(arg))
-        if not ok then
-            print(err)
-            exitcode = 3
-        end
+        cmd(table.unpack(arg))
+        --local ok, err = pcall(cmd, table.unpack(arg))
+        --if not ok then
+        --    print(err)
+        --    exitcode = 3
+        --end
     end
 end
-
-
 
 print("Cleaning up. . . ")
 local v
