@@ -53,7 +53,7 @@ scanlists() {
     done
 }
 
-tdel=$(grep -xFvf <(scanlists) "$dbd/files.list")
+tdel=$(scanlists | grep -xFvf - "$dbd/files.list")
 if [ $? -gt 1 ]; then
     fail "Error searching for files to delete" 2
 fi
@@ -62,7 +62,7 @@ if [ -e "$dbd/hook" ]; then
     "$dbd/hook" remove || fail "Removal hook returned error code $?" 3
 fi
 
-rm -r $tdel || fail "Failed to delete files" 3
+rm -rf $tdel || fail "Failed to delete files" 3
 rm -r "$dbd" || fail "Failed to remove database entry" 3
 
 rm -rf "$LPKGDIR/lpkg.lock"

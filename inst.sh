@@ -71,7 +71,7 @@ if [ -e "$dbd" ]; then
     update=1
     echo "Replacing $NAME-$(cat "$dbd/version") with $NAME-$VERSION"
 
-    tdel=$(grep -xFvf <(scanlists) "$tmpdir/.files.list")
+    tdel=$(scanlists | grep -xFvf - "$tmpdir/.files.list")
     if [ $? -gt 1 ]; then
         fail "Error searching for files to delete" 2
     fi
@@ -130,7 +130,7 @@ fi
 # delete old files (if applicable)
 if [ $update -eq 1 ]; then
     if [ ! -z "$tdel" ]; then
-        rm -r $tdel || fail "Failed to delete old files" 3
+        rm -rf $tdel || fail "Failed to delete old files" 3
     fi
 fi
 

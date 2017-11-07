@@ -231,7 +231,7 @@ elif [ "$1" == "install" ]; then
     pins=$(cat "$LPKGDIR/pins.list") || fail "Failed to read pin list" 2
     transact $pins $@ || fail "Transaction failed" 3
     for i in $@; do
-        if ! contains $i $@; then
+        if ! contains $i $pins; then
             echo $i >> "$LPKGDIR/pins.list"
         fi
     done
