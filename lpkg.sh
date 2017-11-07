@@ -20,6 +20,7 @@ fetch() {
     if [ ! -e "$fetcher" ]; then
         fail "No fetcher found!"
     fi
+    echo "Downloading $REPO/$2"
     "$fetcher" "$@" || return $?
 }
 
@@ -36,7 +37,7 @@ fetchinfo() {
     fetch "$REPO" "pkgs/$1.pkginfo" "$tmpdir/$1.pkginfo" || return $?
     fetch "$REPO" "pkgs/$1.pkginfo.minisig" "$tmpdir/$1.pkginfo.minisig" || return $?
     minisign -Vm "$tmpdir/$1.pkginfo" -p "$LPKGDIR/pubkey.pub" || return 4
-    local iv="$(infoval "pkgs/$1.pkginfo" NAME)" || return $?
+    local iv="$(infoval "$tmpdir/$1.pkginfo" NAME)" || return $?
     if [ "$iv" != "$1" ]; then
         echo "Package name mismatch: requested $1 but got $iv" >&2
         return 4
@@ -241,14 +242,18 @@ elif [ "$1" == "update" ]; then
     transact $pins || fail "Transaction failed" 3
     tmpcleanup
 elif [ "$1" == "bootstrap" ]; then
-    if [ $# -lt 3 ]; then
+    if [ $# -lt 5 ]; then
         echo "Missing arguments" >&2
         exit 1
     fi
     bootstrap="$PWD"
-    ROOTFS="$2"
-    REPO="$3"
+    export ROOTFS="$2"
+    REPO="$3/$4/$5"
     mkdir "$ROOTFS" || fail "Failed to mkdir $ROOTFS" 2
+    mkdir -p "$ROOTFS/etc/lpkg.d/db" || fail "Failed to create lpkg.d" 2
+    curl "https://$3/minisign.pub" > "$ROOTFS/etc/lpkg.d/pubkey.pub" || fail "Failed to download public key" 4
+    shift
+    shift
     shift
     shift
     shift
@@ -257,14 +262,14 @@ elif [ "$1" == "bootstrap" ]; then
     else
         pkgs="$@"
     fi
-    mkdir -p "$ROOTFS/etc/lpkg.d/db" || fail "Failed to create lpkg.d"
     echo "REPO=\"$REPO\"" > "$ROOTFS/etc/lpkg.d/lpkg.conf"
     setup || fail "Failed to create temporary directory" 2
-    transact $@
+    transact $pkgs || fail "Failed transaction" 3
     for i in $pkgs; do
         echo $i >> "$LPKGDIR/pins.list"
     done
     echo "Bootstrap complete!"
+    tmpcleanup
 else
     fail "Invalid subcommand" 1
 fi

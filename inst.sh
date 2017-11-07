@@ -36,7 +36,7 @@ fi
 mkdir "$LPKGDIR/lpkg.lock" || fail "Failed to acquire lock"
 
 echo "Loading pkginfo"
-source <(tar -xOf $1 ./.pkginfo)
+eval "$(tar -xOf $1 ./.pkginfo)"
 
 if [ -z "$NAME" ]; then
     fail "NAME is empty!" 2
@@ -86,17 +86,19 @@ mv "$tmpdir/.pkginfo" "$dbd/pkginfo.sh.new" || fail "Error moving package info i
 
 trf() {
     if [ ! -e "$1" ]; then
-        fail "$1 does not exist" 3
+        if [ ! -L "$1" ]; then
+            fail "$1 does not exist" 3
+        fi
     fi
-    if [ -d "$1" ]; then
+    if [ -d "$1" -a ! \( -L "$1" \) ]; then
         if [ ! -d "$ROOTFS/$1" ]; then
             local permcode=$(busybox stat -c "%a" "$1") || fail "Failed to acquire permission code for $PWD/$1" 3
             mkdir -m $permcode "$ROOTFS/$1" || fail "Failed to create directory /$1" 3
         fi
-        local i
-        for i in $(ls $i); do
+        local i=
+        for i in $(ls $1); do
             trf "$1/$i"
-        fi
+        done
     else
         mv -f "$1" "$ROOTFS/$1" || fail "Failed to move $1" 3
     fi
