@@ -8,6 +8,14 @@ fail() {
     exit "$2"
 }
 
+infoval() {
+    (
+        . "$1"
+        local val="$2"
+        eval "echo \$$val"
+    ) || return $?
+}
+
 if [ $# -ne 1 ]; then
     echo "Usage: $0 PKGFILE"
     fail "Wrong number of arguments"
@@ -69,7 +77,7 @@ scanlists() {
 # check if an old version is installed
 if [ -e "$dbd" ]; then
     update=1
-    echo "Replacing $NAME-$(cat "$dbd/version") with $NAME-$VERSION"
+    echo "Replacing $NAME-$(infoval "$dbd/pkginfo.sh" VERSION) with $NAME-$VERSION"
 
     tdel=$(scanlists | grep -xFvf - "$tmpdir/.files.list")
     if [ $? -gt 1 ]; then
