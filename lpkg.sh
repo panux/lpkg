@@ -241,6 +241,23 @@ elif [ "$1" == "update" ]; then
     pins=$(cat "$LPKGDIR/pins.list") || fail "Failed to read pin list" 2
     transact $pins || fail "Transaction failed" 3
     tmpcleanup
+elif [ "$1" == "remove" ]; then
+    opins=$(cat "$LPKGDIR/pins.list") || fail "Failed to read pin list" 2
+    for i in $@; do
+        if ! contains $i $opins; then
+            tmpcleanup
+            fail "$i is not pinned" 1
+        fi
+    done
+    pins=
+    for i in $opins; do
+        if ! contains $i $@; then
+            pins="$pins $i"
+        fi
+    done
+    setup || fail "Failed to create temporary directory" 2
+    transact $pins || fail "Transaction failed" 3
+    tmpcleanup
 elif [ "$1" == "bootstrap" ]; then
     if [ $# -lt 5 ]; then
         echo "Missing arguments" >&2
