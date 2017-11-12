@@ -104,7 +104,7 @@ trf() {
             mkdir -m $permcode "$ROOTFS/$1" || fail "Failed to create directory /$1" 3
         fi
         local i=
-        for i in $(ls $1); do
+        for i in $(ls -a $1); do
             trf "$1/$i"
         done
     else
