@@ -77,10 +77,10 @@ reconfigure() {
     update "$1"
 }
 
-if [ "$1" -eq "update" ]; then
+if [ "$1" == "update" ]; then
     shift
     update "$@"
-elif [ "$1" -eq "reconfigure" ]; then
+elif [ "$1" == "reconfigure" ]; then
     shift
     reconfigure "$@"
 else
