@@ -48,7 +48,7 @@ update() {
     if [ -z "$target" ]; then
         fail "Nothing to provide!" 2
     fi
-    ln -sfn "$target" "$ALTD/$provider.provider" || fail "Failed to update link $target" 2
+    ln -sfn "$ALTD/$provider.provider" "$target" || fail "Failed to update link $target" 2
 }
 
 # User command to manually override a provider
