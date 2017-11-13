@@ -206,6 +206,7 @@ setup() {
         fail "lpkg.conf is missing" 3
     fi
     . "$LPKGDIR/lpkg.conf"
+    export LPKGDIR
     tmpdir=$(mktemp -d) || return 2
 }
 
@@ -242,6 +243,7 @@ elif [ "$1" == "update" ]; then
     transact $pins || fail "Transaction failed" 3
     tmpcleanup
 elif [ "$1" == "remove" ]; then
+    setup || fail "Failed to create temporary directory" 2
     opins=$(cat "$LPKGDIR/pins.list") || fail "Failed to read pin list" 2
     for i in $@; do
         if ! contains $i $opins; then
@@ -255,9 +257,13 @@ elif [ "$1" == "remove" ]; then
             pins="$pins $i"
         fi
     done
-    setup || fail "Failed to create temporary directory" 2
     transact $pins || fail "Transaction failed" 3
     tmpcleanup
+    (
+        for i in $pins; do
+            echo $i
+        done
+    ) > "$LPKGDIR/pins.list"
 elif [ "$1" == "bootstrap" ]; then
     if [ $# -lt 5 ]; then
         echo "Missing arguments" >&2
