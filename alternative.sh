@@ -41,7 +41,7 @@ update() {
     if [ -e "$ALTD/.override" ]; then
         provider=$(cat "$ALTD/.override")
     fi
-    if [ ! -e "$ALTD/$provider.provider" ]; then
+    if [ ! -L "$ALTD/$provider.provider" ]; then
         fail "Provider $provider does not exist" 2
     fi
     target=$(cat "$ALTD/.target")
