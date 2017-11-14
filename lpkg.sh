@@ -243,6 +243,7 @@ elif [ "$1" == "update" ]; then
     transact $pins || fail "Transaction failed" 3
     tmpcleanup
 elif [ "$1" == "remove" ]; then
+    shift
     setup || fail "Failed to create temporary directory" 2
     opins=$(cat "$LPKGDIR/pins.list") || fail "Failed to read pin list" 2
     for i in $@; do
