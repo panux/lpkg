@@ -48,7 +48,7 @@ update() {
     if [ -z "$target" ]; then
         fail "Nothing to provide!" 2
     fi
-    ln -sfn "$ALTD/$provider.provider" "$ROOTFS/$target" || fail "Failed to update link $target" 2
+    ln -sfn "/etc/lpkg.d/alt.d/$1/$provider.provider" "$ROOTFS/$target" || fail "Failed to update link $target" 2
 }
 
 # User command to manually override a provider
