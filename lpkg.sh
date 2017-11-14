@@ -270,7 +270,7 @@ elif [ "$1" == "bootstrap" ]; then
         echo "Missing arguments" >&2
         exit 1
     fi
-    bootstrap="$PWD"
+    export bootstrap="$PWD"
     export ROOTFS="$2"
     REPO="$3/$4/$5"
     mkdir "$ROOTFS" || fail "Failed to mkdir $ROOTFS" 2
