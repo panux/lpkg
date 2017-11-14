@@ -25,6 +25,8 @@ if [ ! -z "$ROOTFS" ]; then
     if [ ! -d "$ROOTFS" ]; then
         fail "$ROOTFS does not exist or is not a directory"
     fi
+else
+    export ROOTFS=/
 fi
 
 if [ -z "$LPKGDIR" ]; then
@@ -132,7 +134,7 @@ if [ -e "$tmpdir/.oninstall" ]; then
     if [ $update -eq 1 ]; then
         its=update
     fi
-    "$tmpdir/.oninstall" $its || fail "onInstall script returned error code $?" 3
+    "$tmpdir/.oninstall" $its $ROOTFS || fail "onInstall script returned error code $?" 3
 fi
 
 # delete old files (if applicable)
