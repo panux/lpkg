@@ -34,7 +34,7 @@ infoval() {
 
 # fetch and verify package info
 fetchinfo() {
-    if [ -e "$LPKGDIR/db/$1/pkginfo.sh" -a "$UPDATE" -ne 1 ]; then
+    if [ -e "$LPKGDIR/db/$1/pkginfo.sh" -a -z "$UPDATE" ]; then
         cp "$LPKGDIR/db/$1/pkginfo.sh" "$tmpdir/$1.pkginfo" || return $?
     else
         fetch "$REPO" "pkgs/$1.pkginfo" "$tmpdir/$1.pkginfo" || return $?
