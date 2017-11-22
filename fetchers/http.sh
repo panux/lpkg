@@ -6,4 +6,4 @@ if [ $# -ne 3 ]; then
     exit 1
 fi
 
-wget "http://$1/$2" -O "$3" || exit 2
+wget -q "http://$1/$2" -O "$3" || exit 2

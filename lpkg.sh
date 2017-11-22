@@ -37,6 +37,7 @@ fetchinfo() {
     if [ -e "$LPKGDIR/db/$1/pkginfo.sh" -a -z "$UPDATE" ]; then
         cp "$LPKGDIR/db/$1/pkginfo.sh" "$tmpdir/$1.pkginfo" || return $?
     else
+        echo "Fetching info for $1"
         fetch "$REPO" "pkgs/$1.pkginfo" "$tmpdir/$1.pkginfo" || return $?
         fetch "$REPO" "pkgs/$1.pkginfo.minisig" "$tmpdir/$1.pkginfo.minisig" || return $?
         minisign -Vm "$tmpdir/$1.pkginfo" -p "$LPKGDIR/pubkey.pub" || return 4
@@ -85,6 +86,7 @@ fetchpkg() {
         echo "No hash in pkginfo!" >&2
         return 4
     fi
+    echo "Downloading $1"
     fetch "$REPO" "pkgs/$1.tar.gz" "$tmpdir/$1.tar.gz" || return $?
     if [ "$hash" != "$(sha256sum "$tmpdir/$1.tar.gz" | awk '{print $1}')" ]; then
         echo "SHA256 hash does not match on $1.tar.gz!" >&2

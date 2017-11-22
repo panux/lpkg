@@ -6,4 +6,4 @@ if [ $# -ne 3 ]; then
     exit 1
 fi
 
-curl "https://$1/$2" > "$3" || exit 2
+curl -s "https://$1/$2" > "$3" || exit 2
