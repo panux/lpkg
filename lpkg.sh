@@ -40,7 +40,7 @@ fetchinfo() {
         echo "Fetching info for $1"
         fetch "$REPO" "pkgs/$1.pkginfo" "$tmpdir/$1.pkginfo" || return $?
         fetch "$REPO" "pkgs/$1.pkginfo.minisig" "$tmpdir/$1.pkginfo.minisig" || return $?
-        minisign -Vm "$tmpdir/$1.pkginfo" -p "$LPKGDIR/pubkey.pub" || return 4
+        minisign -q -Vm "$tmpdir/$1.pkginfo" -p "$LPKGDIR/pubkey.pub" || return 4
         local iv="$(infoval "$tmpdir/$1.pkginfo" NAME)" || return $?
         if [ "$iv" != "$1" ]; then
             echo "Package name mismatch: requested $1 but got $iv" >&2
@@ -282,7 +282,7 @@ elif [ "$1" == "bootstrap" ]; then
     REPO="$3/$4/$5"
     mkdir "$ROOTFS" || fail "Failed to mkdir $ROOTFS" 2
     mkdir -p "$ROOTFS/etc/lpkg.d/db" || fail "Failed to create lpkg.d" 2
-    curl "https://$3/minisign.pub" > "$ROOTFS/etc/lpkg.d/pubkey.pub" || fail "Failed to download public key" 4
+    curl -s "https://$3/minisign.pub" > "$ROOTFS/etc/lpkg.d/pubkey.pub" || fail "Failed to download public key" 4
     shift
     shift
     shift
