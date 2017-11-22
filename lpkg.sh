@@ -34,13 +34,17 @@ infoval() {
 
 # fetch and verify package info
 fetchinfo() {
-    fetch "$REPO" "pkgs/$1.pkginfo" "$tmpdir/$1.pkginfo" || return $?
-    fetch "$REPO" "pkgs/$1.pkginfo.minisig" "$tmpdir/$1.pkginfo.minisig" || return $?
-    minisign -Vm "$tmpdir/$1.pkginfo" -p "$LPKGDIR/pubkey.pub" || return 4
-    local iv="$(infoval "$tmpdir/$1.pkginfo" NAME)" || return $?
-    if [ "$iv" != "$1" ]; then
-        echo "Package name mismatch: requested $1 but got $iv" >&2
-        return 4
+    if [ ( -e "$LPKGDIR/db/$1/pkginfo.sh" ) -a ( "$UPDATE" -ne 1 ) ]; then
+        cp "$LPKGDIR/db/$1/pkginfo.sh" "$tmpdir/$1.pkginfo" || return $?
+    else
+        fetch "$REPO" "pkgs/$1.pkginfo" "$tmpdir/$1.pkginfo" || return $?
+        fetch "$REPO" "pkgs/$1.pkginfo.minisig" "$tmpdir/$1.pkginfo.minisig" || return $?
+        minisign -Vm "$tmpdir/$1.pkginfo" -p "$LPKGDIR/pubkey.pub" || return 4
+        local iv="$(infoval "$tmpdir/$1.pkginfo" NAME)" || return $?
+        if [ "$iv" != "$1" ]; then
+            echo "Package name mismatch: requested $1 but got $iv" >&2
+            return 4
+        fi
     fi
 }
 
@@ -238,6 +242,7 @@ elif [ "$1" == "install" ]; then
     done
     tmpcleanup
 elif [ "$1" == "update" ]; then
+    UPDATE=1
     setup || fail "Failed to create temporary directory" 2
     pins=$(cat "$LPKGDIR/pins.list") || fail "Failed to read pin list" 2
     transact $pins || fail "Transaction failed" 3
