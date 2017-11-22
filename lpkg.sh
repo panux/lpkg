@@ -20,7 +20,6 @@ fetch() {
     if [ ! -e "$fetcher" ]; then
         fail "No fetcher found!"
     fi
-    echo "Downloading $REPO/$2"
     "$fetcher" "$@" || return $?
 }
 
