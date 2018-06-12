@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/busybox sh
 
 # Script to remove a package
 

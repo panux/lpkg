@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/busybox sh
 
 fail() {
     echo "ERROR: $1" >&2

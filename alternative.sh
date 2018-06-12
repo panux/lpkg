@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/busybox sh
 
 # Alternative is a script to manage files provided by multiple packages
 
